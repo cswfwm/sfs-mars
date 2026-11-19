@@ -1,0 +1,166 @@
+{
+  "spec": "sfsai/1",
+  "meta": {
+    "name": "Ares-III 火星捕获与着陆",
+    "author": "AI",
+    "description": "自 150 km 火星圆轨道反向点火降轨（近地点压入大气），滑行进入后末端动力着陆；本脚本按 --body mars 在火星本地验证。",
+    "tags": [
+      "mars",
+      "capture",
+      "landing"
+    ]
+  },
+  "craft": {
+    "name": "Ares-III 地火运载器",
+    "stages": 3,
+    "twr": 1.51
+  },
+  "defaults": {
+    "tickMs": 50,
+    "startOn": "manual",
+    "limits": {
+      "minFuelAbort": 0.002
+    }
+  },
+  "program": [
+    {
+      "id": "capture",
+      "do": [
+        {
+          "stage": true
+        },
+        {
+          "pitch": {
+            "mode": "retrograde"
+          }
+        },
+        {
+          "engine": "on"
+        },
+        {
+          "throttle": 1.0
+        },
+        {
+          "log": "捕获/降轨点火"
+        }
+      ],
+      "until": {
+        "all": [
+          {
+            "field": "fuel",
+            "op": "<",
+            "value": 0.93
+          },
+          {
+            "field": "periapsis",
+            "op": "<=",
+            "value": -20000
+          }
+        ]
+      },
+      "timeout": 500,
+      "next": "coast"
+    },
+    {
+      "id": "coast",
+      "do": [
+        {
+          "engine": "off"
+        },
+        {
+          "throttle": 0
+        },
+        {
+          "warp": 2
+        },
+        {
+          "pitch": {
+            "mode": "surface_retrograde"
+          }
+        }
+      ],
+      "until": {
+        "field": "altitude",
+        "op": "<=",
+        "value": 20000
+      },
+      "timeout": 1800,
+      "next": "final"
+    },
+    {
+      "id": "final",
+      "do": [
+        {
+          "warp": 1
+        },
+        {
+          "pitch": {
+            "mode": "hold",
+            "deg": 90
+          }
+        },
+        {
+          "engine": "on"
+        }
+      ],
+      "while": [
+        {
+          "throttle": {
+            "expr": "clamp(0.40 + (clamp(-sqrt(2*3.71*max(altAgl,0))*0.7-1.0,-40,-0.8) - vs) * 0.5, 0.0, 0.9)"
+          }
+        }
+      ],
+      "until": {
+        "event": "landed"
+      },
+      "timeout": 900,
+      "next": "done"
+    },
+    {
+      "id": "done",
+      "do": [
+        {
+          "throttle": 0
+        },
+        {
+          "engine": "off"
+        },
+        {
+          "deploy": {
+            "legs": true
+          }
+        },
+        {
+          "log": "火星着陆完成"
+        }
+      ]
+    }
+  ],
+  "onAbort": [
+    {
+      "id": "ab",
+      "do": [
+        {
+          "engine": "off"
+        },
+        {
+          "log": "中止"
+        }
+      ]
+    }
+  ],
+  "onEnd": [
+    {
+      "id": "e",
+      "do": [
+        {
+          "engine": "off"
+        }
+      ]
+    }
+  ],
+  "vars": {
+    "deorbitPeri": -20000,
+    "handoverAlt": 20000
+  }
+}

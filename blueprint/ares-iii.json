@@ -1,0 +1,55 @@
+{
+  "spec": "sfsai-blueprint/1",
+  "meta": {
+    "name": "Ares-III 地火运载器",
+    "author": "AI",
+    "description": "三级运载器：地球入轨、地球逃逸、火星捕获与着陆通用。SFS 尺度（地球 R=315km, g0=9.8）。",
+    "version": "1.0.0"
+  },
+  "craft": {
+    "name": "Ares-III 地火运载器",
+    "payload": 1200,
+    "stages": [
+      {
+        "id": "S1",
+        "role": "助推级",
+        "dry": 6000,
+        "fuel": 55000,
+        "thrustAsl": 1100000,
+        "thrustVac": 1230000,
+        "isp": 265,
+        "dv": 2981,
+        "twr0": 1.39
+      },
+      {
+        "id": "S2",
+        "role": "芯二级",
+        "dry": 2500,
+        "fuel": 9000,
+        "thrustAsl": 260000,
+        "thrustVac": 304000,
+        "isp": 315,
+        "dv": 1899,
+        "twr0": 1.35
+      },
+      {
+        "id": "S3",
+        "role": "转移/着陆级",
+        "dry": 900,
+        "fuel": 6000,
+        "thrustAsl": 120000,
+        "thrustVac": 132000,
+        "isp": 340,
+        "dv": 4501,
+        "twr0": 1.51
+      }
+    ],
+    "totals": {
+      "liftoffMass": 80600,
+      "dvVacuum": 9380,
+      "twr0": 1.39,
+      "payloadToMars": 1200
+    },
+    "notes": "总 Δv 7207 m/s（真空、无重力/阻力损失），满足地球入轨(~1800)+逃逸(~700)+火星捕获与着陆(~1500) 的预算。引擎 SimVehicle 按 stages 的 dry/fuel/thrustAsl/thrustVac/isp 建模，payload 为各级抛离后仍保留的质量。"
+  }
+}

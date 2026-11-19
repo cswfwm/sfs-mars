@@ -1,0 +1,251 @@
+{
+  "spec": "sfsai/1",
+  "meta": {
+    "name": "Ares-III 火星上行与着陆",
+    "author": "AI",
+    "description": "自地球 80 km 低轨起，S2 逃逸点火形成双曲轨道，S3 承担火星捕获制动与动力着陆（火星段用 --body mars 分段验证）。",
+    "tags": [
+      "transfer",
+      "mars",
+      "landing"
+    ]
+  },
+  "craft": {
+    "name": "Ares-III 运载器",
+    "stages": 3,
+    "twr": 1.45
+  },
+  "defaults": {
+    "tickMs": 50,
+    "startOn": "manual",
+    "limits": {
+      "maxPitchRate": 8,
+      "maxQ": 35000,
+      "maxThrottleRate": 2.0,
+      "minFuelAbort": 0.005
+    }
+  },
+  "vars": {
+    "escapeTime": 55,
+    "entryAlt": 12000
+  },
+  "program": [
+    {
+      "id": "escape_burn",
+      "do": [
+        {
+          "pitch": {
+            "mode": "prograde"
+          }
+        },
+        {
+          "throttle": 1.0
+        },
+        {
+          "engine": "on"
+        },
+        {
+          "log": "逃逸点火：把 80km 圆轨道抬成双曲轨道"
+        }
+      ],
+      "until": {
+        "field": "ecc",
+        "op": ">=",
+        "value": 1.0
+      },
+      "timeout": 240,
+      "next": "coast_to_mars"
+    },
+    {
+      "id": "coast_to_mars",
+      "do": [
+        {
+          "engine": "off"
+        },
+        {
+          "throttle": 0
+        },
+        {
+          "warp": 4
+        },
+        {
+          "log": "转移滑行至火星近地点"
+        }
+      ],
+      "until": {
+        "all": [
+          {
+            "field": "altitude",
+            "op": "<=",
+            "value": 15000
+          },
+          {
+            "field": "vs",
+            "op": "<",
+            "value": 0
+          }
+        ]
+      },
+      "timeout": 3600,
+      "next": "capture_burn"
+    },
+    {
+      "id": "capture_burn",
+      "do": [
+        {
+          "stage": true
+        },
+        {
+          "pitch": {
+            "mode": "surface_retrograde"
+          }
+        },
+        {
+          "throttle": 1.0
+        },
+        {
+          "engine": "on"
+        },
+        {
+          "log": "火星捕获制动"
+        }
+      ],
+      "until": {
+        "field": "vs",
+        "op": ">=",
+        "value": -60
+      },
+      "timeout": 300,
+      "next": "entry_brake"
+    },
+    {
+      "id": "entry_brake",
+      "do": [
+        {
+          "pitch": {
+            "mode": "surface_retrograde"
+          }
+        },
+        {
+          "throttle": {
+            "expr": "clamp((0 - vs)/260, 0.0, 1.0)"
+          }
+        },
+        {
+          "log": "进入火星大气，反推减速"
+        }
+      ],
+      "until": {
+        "all": [
+          {
+            "field": "altAgl",
+            "op": "<=",
+            "value": 2500
+          },
+          {
+            "field": "vs",
+            "op": ">=",
+            "value": -30
+          }
+        ]
+      },
+      "timeout": 420,
+      "next": "final_descent"
+    },
+    {
+      "id": "final_descent",
+      "do": [
+        {
+          "warp": 1
+        },
+        {
+          "guidance": "land",
+          "maxVs": 3.0,
+          "touchdownVs": 1.0
+        },
+        {
+          "log": "末期动力着陆"
+        }
+      ],
+      "until": {
+        "event": "landed"
+      },
+      "timeout": 420,
+      "next": "touchdown"
+    },
+    {
+      "id": "touchdown",
+      "do": [
+        {
+          "throttle": 0
+        },
+        {
+          "engine": "off"
+        },
+        {
+          "deploy": {
+            "legs": true
+          }
+        },
+        {
+          "log": "火星着陆完成"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "hover_kill",
+      "priority": 0,
+      "when": {
+        "all": [
+          {
+            "field": "altAgl",
+            "op": "<",
+            "value": 800
+          },
+          {
+            "field": "vs",
+            "op": ">",
+            "value": -1.0
+          }
+        ]
+      },
+      "do": [
+        {
+          "throttle": {
+            "expr": "clamp(0.35 + (0 - vs)/40, 0, 0.7)"
+          }
+        }
+      ]
+    }
+  ],
+  "onAbort": [
+    {
+      "id": "abort_cut",
+      "do": [
+        {
+          "engine": "off"
+        },
+        {
+          "pitch": {
+            "mode": "surface_retrograde"
+          }
+        },
+        {
+          "log": "中止：关机"
+        }
+      ]
+    }
+  ],
+  "onEnd": [
+    {
+      "id": "end_off",
+      "do": [
+        {
+          "engine": "off"
+        }
+      ]
+    }
+  ]
+}

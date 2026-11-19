@@ -1,0 +1,233 @@
+{
+  "spec": "sfsai/1",
+  "meta": {
+    "name": "Ares-III 地球入轨",
+    "author": "AI",
+    "description": "Ares-III 自地球起飞，一级重力转弯、二级抬升、二级/三级圆化，进入 80 km 近圆轨道。",
+    "tags": [
+      "ascent",
+      "earth"
+    ]
+  },
+  "craft": {
+    "name": "Ares-III 地火运载器",
+    "stages": 3,
+    "twr": 1.48
+  },
+  "defaults": {
+    "tickMs": 50,
+    "startOn": "liftoff",
+    "limits": {
+      "maxPitchRate": 8,
+      "maxQ": 35000,
+      "maxThrottleRate": 2.0,
+      "minFuelAbort": 0.01
+    }
+  },
+  "vars": {
+    "targetApo": 80000,
+    "targetPeri": 70000
+  },
+  "program": [
+    {
+      "id": "ignition",
+      "do": [
+        {
+          "stage": true
+        },
+        {
+          "throttle": 1.0
+        },
+        {
+          "pitch": {
+            "mode": "hold",
+            "deg": 90
+          }
+        },
+        {
+          "log": "点火起飞"
+        }
+      ],
+      "until": {
+        "field": "altitude",
+        "op": ">=",
+        "value": 1200
+      },
+      "timeout": 90,
+      "next": "gravity_turn"
+    },
+    {
+      "id": "gravity_turn",
+      "do": [
+        {
+          "guidance": "gravity_turn",
+          "startAlt": 1200,
+          "endAlt": 30000,
+          "endPitch": 8
+        },
+        {
+          "log": "重力转弯"
+        }
+      ],
+      "until": {
+        "field": "altitude",
+        "op": ">=",
+        "value": 30000
+      },
+      "timeout": 300,
+      "next": "stage2"
+    },
+    {
+      "id": "stage2",
+      "do": [
+        {
+          "stage": true
+        },
+        {
+          "throttle": 1.0
+        },
+        {
+          "pitch": {
+            "mode": "prograde"
+          }
+        },
+        {
+          "log": "一级分离，二级点火"
+        }
+      ],
+      "until": {
+        "field": "apoapsis",
+        "op": ">=",
+        "value": 80000
+      },
+      "timeout": 300,
+      "next": "coast"
+    },
+    {
+      "id": "coast",
+      "do": [
+        {
+          "throttle": 0
+        },
+        {
+          "engine": "off"
+        },
+        {
+          "warp": 2
+        },
+        {
+          "log": "滑行至远地点附近"
+        }
+      ],
+      "until": {
+        "all": [
+          {
+            "field": "vs",
+            "op": "<",
+            "value": 60
+          },
+          {
+            "field": "altitude",
+            "op": ">=",
+            "value": 60000
+          }
+        ]
+      },
+      "timeout": 600,
+      "next": "circularize"
+    },
+    {
+      "id": "circularize",
+      "do": [
+        {
+          "warp": 1
+        },
+        {
+          "engine": "on"
+        },
+        {
+          "guidance": "circularize",
+          "targetApo": 80000,
+          "targetPeri": 70000
+        },
+        {
+          "log": "圆化"
+        }
+      ],
+      "until": {
+        "event": "guidance_done"
+      },
+      "timeout": 300,
+      "next": "shutdown"
+    },
+    {
+      "id": "shutdown",
+      "do": [
+        {
+          "throttle": 0
+        },
+        {
+          "engine": "off"
+        },
+        {
+          "log": "地球 80km 轨道建立"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "q_guard",
+      "priority": 0,
+      "when": {
+        "all": [
+          {
+            "field": "q",
+            "op": ">",
+            "value": 22000
+          },
+          {
+            "field": "altitude",
+            "op": "<",
+            "value": 30000
+          }
+        ]
+      },
+      "do": [
+        {
+          "throttle": {
+            "expr": "clamp(throttle - 0.05, 0.55, 1)"
+          }
+        }
+      ]
+    }
+  ],
+  "onAbort": [
+    {
+      "id": "abort_engine_off",
+      "do": [
+        {
+          "engine": "off"
+        },
+        {
+          "pitch": {
+            "mode": "prograde"
+          }
+        },
+        {
+          "log": "中止：关机并保持顺速度姿态"
+        }
+      ]
+    }
+  ],
+  "onEnd": [
+    {
+      "id": "end_engine_off",
+      "do": [
+        {
+          "engine": "off"
+        }
+      ]
+    }
+  ]
+}
