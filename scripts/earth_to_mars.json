@@ -1,0 +1,331 @@
+{
+  "spec": "sfsai/1",
+  "meta": {
+    "name": "Ares-III 地球到火星（分段脚本）",
+    "author": "AI",
+    "body": "earth",
+    "bodyTarget": "mars",
+    "description": "segment=depart 的步骤只在出发段跑，segment=arrive 只在到达段跑"
+  },
+  "craft": {
+    "name": "Ares-III",
+    "payload": 1200,
+    "stages": [
+      {
+        "dry": 6000,
+        "fuel": 55000,
+        "thrustAsl": 1100000,
+        "thrustVac": 1230000,
+        "isp": 265
+      },
+      {
+        "dry": 2500,
+        "fuel": 9000,
+        "thrustAsl": 260000,
+        "thrustVac": 304000,
+        "isp": 315
+      },
+      {
+        "dry": 900,
+        "fuel": 6000,
+        "thrustAsl": 120000,
+        "thrustVac": 132000,
+        "isp": 340
+      }
+    ]
+  },
+  "defaults": {
+    "tickMs": 50,
+    "startOn": "manual",
+    "limits": {
+      "minFuelAbort": 0.002,
+      "maxQ": 35000
+    }
+  },
+  "program": [
+    {
+      "id": "ignition",
+      "segment": "depart",
+      "do": [
+        {
+          "stage": true
+        },
+        {
+          "throttle": 1.0
+        },
+        {
+          "pitch": {
+            "mode": "hold",
+            "deg": 90
+          }
+        }
+      ],
+      "until": {
+        "field": "altitude",
+        "op": ">=",
+        "value": 1200
+      },
+      "timeout": 90
+    },
+    {
+      "id": "gt",
+      "segment": "depart",
+      "do": [
+        {
+          "guidance": "gravity_turn",
+          "startAlt": 1200,
+          "endAlt": 42000,
+          "endPitch": 8
+        }
+      ],
+      "until": {
+        "field": "altitude",
+        "op": ">=",
+        "value": 42000
+      },
+      "timeout": 300
+    },
+    {
+      "id": "s2",
+      "segment": "depart",
+      "do": [
+        {
+          "stage": true
+        },
+        {
+          "throttle": 1.0
+        },
+        {
+          "pitch": {
+            "mode": "prograde"
+          }
+        }
+      ],
+      "until": {
+        "field": "apoapsis",
+        "op": ">=",
+        "value": 80000
+      },
+      "timeout": 300
+    },
+    {
+      "id": "circ",
+      "segment": "depart",
+      "do": [
+        {
+          "guidance": "circularize",
+          "targetApo": 80000,
+          "targetPeri": 70000
+        }
+      ],
+      "until": {
+        "event": "guidance_done"
+      },
+      "timeout": 300
+    },
+    {
+      "id": "escape",
+      "segment": "depart",
+      "do": [
+        {
+          "pitch": {
+            "mode": "prograde"
+          }
+        },
+        {
+          "throttle": 1.0
+        },
+        {
+          "log": "转移注入"
+        }
+      ],
+      "until": {
+        "field": "ecc",
+        "op": ">=",
+        "value": 1.0
+      },
+      "timeout": 300
+    },
+    {
+      "id": "depart_done",
+      "segment": "depart",
+      "do": [
+        {
+          "engine": "off"
+        },
+        {
+          "throttle": 0
+        },
+        {
+          "log": "出发段完成"
+        }
+      ]
+    },
+    {
+      "id": "arrival_brake",
+      "segment": "arrive",
+      "do": [
+        {
+          "pitch": {
+            "mode": "retrograde"
+          }
+        },
+        {
+          "engine": "on"
+        },
+        {
+          "throttle": 1.0
+        },
+        {
+          "log": "到达：反推制动，把双曲轨道压成椭圆"
+        }
+      ],
+      "until": {
+        "all": [
+          {
+            "field": "fuel",
+            "op": "<",
+            "value": 0.9
+          },
+          {
+            "field": "periapsis",
+            "op": "<=",
+            "value": -20000
+          },
+          {
+            "field": "periapsis",
+            "op": ">=",
+            "value": -170000
+          }
+        ]
+      },
+      "timeout": 400
+    },
+    {
+      "id": "arrival_coast",
+      "segment": "arrive",
+      "do": [
+        {
+          "engine": "off"
+        },
+        {
+          "throttle": 0
+        },
+        {
+          "pitch": {
+            "mode": "surface_retrograde"
+          }
+        }
+      ],
+      "until": {
+        "field": "altitude",
+        "op": "<=",
+        "value": 9000
+      },
+      "timeout": 1800
+    },
+    {
+      "id": "arrival_decel",
+      "segment": "arrive",
+      "do": [
+        {
+          "pitch": {
+            "mode": "hold",
+            "deg": 90
+          }
+        },
+        {
+          "engine": "on"
+        }
+      ],
+      "while": [
+        {
+          "throttle": {
+            "expr": "clamp(0.55 + (vs + 60)/120, 0.0, 0.95)"
+          }
+        }
+      ],
+      "until": {
+        "all": [
+          {
+            "field": "vs",
+            "op": ">=",
+            "value": -25
+          },
+          {
+            "field": "speed",
+            "op": "<=",
+            "value": 150
+          }
+        ]
+      },
+      "timeout": 900
+    },
+    {
+      "id": "arrival_final",
+      "segment": "arrive",
+      "do": [
+        {
+          "pitch": {
+            "mode": "hold",
+            "deg": 90
+          }
+        }
+      ],
+      "while": [
+        {
+          "throttle": {
+            "expr": "clamp(0.40 + (clamp(-sqrt(2*3.71*max(altAgl,0))*0.7-1.0,-40,-0.8) - vs) * 0.5, 0.0, 0.9)"
+          }
+        }
+      ],
+      "until": {
+        "event": "landed"
+      },
+      "timeout": 900
+    },
+    {
+      "id": "arrival_done",
+      "segment": "arrive",
+      "do": [
+        {
+          "throttle": 0
+        },
+        {
+          "engine": "off"
+        },
+        {
+          "deploy": {
+            "legs": true
+          }
+        },
+        {
+          "log": "火星着陆完成"
+        }
+      ]
+    }
+  ],
+  "onAbort": [
+    {
+      "id": "ab",
+      "do": [
+        {
+          "engine": "off"
+        },
+        {
+          "log": "中止"
+        }
+      ]
+    }
+  ],
+  "onEnd": [
+    {
+      "id": "e",
+      "do": [
+        {
+          "engine": "off"
+        }
+      ]
+    }
+  ]
+}

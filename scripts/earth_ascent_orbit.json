@@ -1,0 +1,11 @@
+{"spec":"sfsai/1","meta":{"name":"地球入轨（回归）"},"craft":{"name":"Ares-III","payload":1200,
+ "stages":[{"dry":6000,"fuel":55000,"thrustAsl":1100000,"thrustVac":1230000,"isp":265},
+           {"dry":2500,"fuel":9000,"thrustAsl":260000,"thrustVac":304000,"isp":315},
+           {"dry":900,"fuel":6000,"thrustAsl":120000,"thrustVac":132000,"isp":340}]},
+ "defaults":{"tickMs":50,"startOn":"liftoff","limits":{"minFuelAbort":0.01}},
+ "program":[
+  {"id":"ignition","do":[{"stage":true},{"throttle":1.0},{"pitch":{"mode":"hold","deg":90}}],"until":{"field":"altitude","op":">=","value":1200},"timeout":90},
+  {"id":"gt","do":[{"guidance":"gravity_turn","startAlt":1200,"endAlt":30000,"endPitch":8}],"until":{"field":"altitude","op":">=","value":30000},"timeout":300},
+  {"id":"s2","do":[{"stage":true},{"throttle":1.0},{"pitch":{"mode":"prograde"}}],"until":{"field":"apoapsis","op":">=","value":80000},"timeout":300},
+  {"id":"circ","do":[{"guidance":"circularize","targetApo":80000,"targetPeri":70000}],"until":{"event":"guidance_done"},"timeout":300}],
+ "onAbort":[{"id":"ab","do":[{"engine":"off"}]}],"onEnd":[{"id":"e","do":[{"engine":"off"}]}]}
